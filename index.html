@@ -621,7 +621,7 @@ placeCamera(CAMV);
 
 // ---------- 故事 ----------
 const UI={
-  en:{ai:'Assistant',you:'You',choose:'Choose what you say',tap:'Tap to continue',offline:'Assistant is offline.',again:'Play again',switchTo:'中',name:'[Your Name]',day:'Friday 6 November',loading:'Loading the desk…',claim:'Our last job is\nto take responsibility for AI.'},
+  en:{ai:'Assistant',you:'You',choose:'Choose what you say',tap:'Tap to continue',offline:'Assistant is offline.',again:'Play again',switchTo:'中文',name:'[Your Name]',day:'Friday 6 November',loading:'Loading the desk…',claim:'Our last job is\nto take responsibility for AI.'},
   zh:{ai:'助手',you:'你',choose:'选择你要说的话',tap:'点击继续',offline:'助手已离线',again:'再看一次',switchTo:'EN',name:'[你的名字]',day:'11月6日 星期五',loading:'正在摆桌子……',claim:'我们最后的工作，\n是替 AI 承担责任。'}
 };
 const PINGS={
@@ -697,7 +697,7 @@ const STORY={
 
 
 const stage = $('stage');
-let lang = new URLSearchParams(location.search).get('lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+let lang = new URLSearchParams(location.search).get('lang') === 'zh' ? 'zh' : 'en';   // 扫码默认英文，右上角按钮切中文
 let run = 0, tapResolve = null, closed = false, taps = 0, offlineTimer = 0;
 const AUTO = window.__auto || (STILL ? {path: [1, 0, 0, 1], still: true} : null);
 
