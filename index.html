@@ -1,0 +1,834 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>The Last Job</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=Libre+Caslon+Text:ital@0;1&display=swap">
+<style>
+/* Layout: one phone-sized desk, rendered in 3D as a printed miniature (same print shading, window light, tilt-shift as the AFTERSTILL works). DOM UI floats on top as printed cards. Single light look by choice. */
+:root{
+  color-scheme:light;
+  --frame:#e9dfcb;
+  --paper:#f4eee1;
+  --ink:#2b2f52;
+  --ink-soft:#6a6658;
+  --cobalt:#2d55d6;
+  --red:#e1352c;
+  --sans:"IBM Plex Sans","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --serif:"Libre Caslon Text","Songti SC","Noto Serif SC",Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--frame);color:var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:var(--sans);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button{font:inherit}
+button:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px}
+.stage{position:relative;width:390px;height:844px;flex:none;overflow:hidden;transform-origin:center;background:var(--paper);touch-action:none}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+.grain{position:absolute;inset:0;pointer-events:none;z-index:40;opacity:.06;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:39;background:radial-gradient(120% 90% at 50% 46%,transparent 58%,rgba(90,60,30,.16))}
+
+/* printed cards */
+.bubble{position:absolute;padding:10px 14px 11px;font-size:14px;line-height:1.45;border-radius:4px;opacity:0;transition:opacity .25s ease,translate .25s ease;translate:0 6px;pointer-events:none;z-index:20;border:1.5px solid var(--ink)}
+.bubble.on{opacity:1;translate:0 0}
+.bubble small{display:block;margin-bottom:3px;font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
+.ai{left:34px;right:34px;top:54px;background:var(--paper);color:var(--ink);box-shadow:4px 4px 0 var(--cobalt)}
+.ai small{color:var(--cobalt)}
+.ai::after{content:"";position:absolute;left:50%;bottom:-9px;width:14px;height:14px;margin-left:-7px;background:var(--paper);border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);transform:rotate(45deg)}
+.you{left:22px;right:22px;bottom:44px;background:var(--cobalt);color:var(--paper);border-color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.you small{color:#c9d4fb}
+
+.choices{position:absolute;left:20px;right:20px;bottom:30px;display:flex;flex-direction:column;gap:9px;z-index:21}
+.choices[hidden]{display:none}
+.choices .label{align-self:flex-start;padding:3px 7px;font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--paper);background:var(--ink);border-radius:2px}
+.choices button{min-height:44px;padding:10px 14px;text-align:left;font-size:14px;line-height:1.4;color:var(--ink);background:var(--paper);
+  border:1.5px solid var(--ink);border-radius:4px;cursor:pointer;box-shadow:4px 4px 0 var(--red);transition:transform .12s,box-shadow .12s}
+.choices button:hover{background:#fbf6ea}
+.choices button:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--red)}
+
+.hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--ink-soft);opacity:0;transition:opacity .4s;z-index:21}
+.hint.on{opacity:1;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+.offline{position:absolute;left:50%;top:150px;translate:-50% 0;padding:5px 10px;font-size:12px;letter-spacing:.06em;color:var(--paper);background:var(--ink);border-radius:2px;opacity:0;transition:opacity .3s;z-index:22;pointer-events:none;white-space:nowrap}
+.offline.on{opacity:1}
+
+.end{position:absolute;left:0;right:0;top:86px;display:flex;flex-direction:column;align-items:center;gap:14px;z-index:30;opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+.end.on{opacity:1;pointer-events:auto}
+.end .kicker{font:italic 400 15px/1 var(--serif);letter-spacing:.04em;color:var(--ink)}
+.end h1{margin:0 24px;padding:12px 18px 14px;max-width:330px;text-align:center;white-space:pre-line;font:500 22px/1.5 var(--serif);color:var(--ink);background:var(--paper);border:1.5px solid var(--ink);box-shadow:5px 5px 0 var(--red)}
+.end h1:lang(en){font-size:21px;font-style:italic;font-weight:400}
+.end button{min-height:40px;padding:0 18px;border-radius:999px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer}
+
+.lang{position:absolute;right:14px;top:14px;z-index:35;min-width:44px;min-height:32px;padding:0 10px;border-radius:999px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-size:12px;cursor:pointer}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;background:var(--paper);color:var(--ink-soft);font-size:12px;letter-spacing:.1em;transition:opacity .6s}
+.loading.off{opacity:0;pointer-events:none}
+
+.stage.still .bubble,.stage.still .lang,.stage.still .hint,.stage.still .choices,.stage.still .offline{display:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<div class="stage" id="stage">
+  <canvas id="gl" width="720" height="1560"></canvas>
+  <div class="vignette"></div>
+  <div class="bubble ai" id="ai"><small id="aiLabel"></small><span id="aiText"></span></div>
+  <div class="offline" id="offline"></div>
+  <div class="bubble you" id="you"><small id="youLabel"></small><span id="youText"></span></div>
+  <div class="choices" id="choices" hidden></div>
+  <div class="hint" id="hint"></div>
+  <div class="end" id="end"><span class="kicker">The Last Job</span><h1 id="claim"></h1><button type="button" id="again"></button></div>
+  <button class="lang" type="button" id="lang"></button>
+  <div class="grain"></div>
+  <div class="loading" id="loading">…</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// The Last Job：俯瞰一张书桌，笔记本是 AI，读者是“你”。所有东西走 AFTERSTILL 的版画着色：一开场被扫描线印出来，之后 AI 每写一份文件，就印出一张纸落到桌上。
+const STILL = new URLSearchParams(location.search).has('still');   // ?still：高清定格一张（给期刊配图），自动走完故事、不合盖、不显示界面
+const CW = STILL ? 1440 : 720, CH = STILL ? 3120 : 1560;
+let SEED = 7;
+const rand = () => { SEED = (SEED * 16807) % 2147483647; return (SEED - 1) / 2147483646; };
+const rnd = (a = 0, b = 1) => a + rand() * (b - a);
+const mrnd = (a = 0, b = 1) => a + Math.random() * (b - a);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const ni = g => g.index ? g.toNonIndexed() : g;
+const C = h => new THREE.Color(h);
+const Vt = (x, y, z) => new THREE.Vector3(x, y, z);
+const X = Vt(1, 0, 0), NX = Vt(-1, 0, 0), Y = Vt(0, 1, 0), Z = Vt(0, 0, 1), NZ = Vt(0, 0, -1);
+const $ = id => document.getElementById(id);
+
+// ---------- 调色板（同《落地生根》） ----------
+const PAPER = C('#f4eee1');
+const FLOOR = C('#e6dac4'), HAZE = '#efe5d2';
+
+// ---------- 输出 ----------
+const renderer = new THREE.WebGLRenderer({canvas: $('gl'), antialias: true});
+renderer.setPixelRatio(1);
+renderer.setSize(CW, CH, false);
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = C(HAZE);
+scene.fog = new THREE.Fog(C(HAZE), 60, 140);
+const FOV = 26;
+const camera = new THREE.PerspectiveCamera(FOV, CW / CH, 0.5, 300);
+const hemi = new THREE.HemisphereLight(C('#bcd0ee'), C('#f1dcc0'), 1.15);
+const SUN_DIR = Vt(-.64, .52, .5).normalize();
+const sun = new THREE.DirectionalLight(C('#ffe6c2'), 3.9);
+sun.position.copy(SUN_DIR).multiplyScalar(40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, {left: -11, right: 11, top: 11, bottom: -11, near: .5, far: 120});
+sun.shadow.bias = -0.0003; sun.shadow.normalBias = .02;
+scene.add(hemi, sun);
+
+// ---------- 版画材质：所有东西共用一套“印刷”着色（同《小星星》） ----------
+const uPaper = {value: PAPER};
+const PRINT_GLSL = `
+  uniform vec3 uPaper;
+  varying vec3 vInk; varying vec2 vUV; varying vec2 vPS; varying float vLy;
+  float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+  float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+    return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + 1.), f.x), f.y); }
+  float fbm(vec2 p){ float s = 0., a = .5; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + 17.1; a *= .5; } return s / .9375; }
+  float aline(float d, float w){ float fw = fwidth(d) * .8 + 1e-4; return 1. - smoothstep(w - fw, w + fw, d); }
+  vec3 printInk(vec3 base, vec3 ink, int pat, vec2 uv, float seed){
+    vec2 q = uv + seed * 7.31;
+    vec3 c = base;
+    if (pat == 1) {                                     // 纱网
+      vec2 g = q * 23.; g.x += .22 * sin(q.y * 9. + seed * 6.); g.y += .22 * sin(q.x * 7.3 + seed);
+      vec2 f = abs(fract(g) - .5); float l = max(aline(f.x, .09), aline(f.y, .09)) * (.55 + .45 * vn(q * 37.));
+      c = mix(base, ink, l);
+    } else if (pat == 2) {                              // 圆点
+      vec2 g = q * 17.; g.x += .5 * mod(floor(g.y), 2.);
+      c = mix(base, ink, aline(length(fract(g) - .5), .23) * (.7 + .3 * vn(q * 30.)));
+    } else if (pat == 3) {                              // 木纹竖线
+      float f = abs(fract(q.x * 21. + .35 * vn(q * vec2(3., 18.))) - .5);
+      c = mix(base, ink, aline(f, .07) * .8);
+    } else if (pat == 7) {                              // 叶片
+      vec2 g = q * 13.; vec2 id = floor(g); vec2 f = fract(g) - .5 - (vec2(h21(id), h21(id + 9.)) - .5) * .4;
+      float a = h21(id + 3.) * 6.28; f = mat2(cos(a), -sin(a), sin(a), cos(a)) * f;
+      c = mix(base, ink, aline(length(f * vec2(1., 2.3)), .26) * step(.25, h21(id + 5.)));
+    } else if (pat == 10) {                             // 纸
+      return base * (.955 + .06 * fbm(q * 2.2) + .025 * vn(vec2(q.x * 3., q.y * 70.)));
+    } else if (pat == 12) {                             // 横条纹
+      c = mix(base, ink, aline(abs(fract(q.y * 13.) - .5), .2));
+    }
+    float m = fbm(q * vec2(5., 8.));                    // 油墨浓淡
+    float st = vn(vec2(q.x * 1.3, q.y * 55.));          // 滚筒刷痕
+    c *= .84 + .28 * m + .13 * (st - .5);
+    float sp = vn(q * 46.) * fbm(q * 9. + 4.);          // 露白
+    return mix(c, uPaper, smoothstep(.46, .72, sp) * .62);
+  }`;
+
+// ---------- 几何构造器：一个个面拼出来 ----------
+class GB {
+  constructor() { this.P = []; this.N = []; this.Cc = []; this.K = []; this.U = []; this.S = []; this.M = new THREE.Matrix4(); }
+  poly(pts, uvs, col, ink, pat, seed) {
+    pts = pts.map(p => p.clone().applyMatrix4(this.M));
+    const n = new THREE.Vector3().subVectors(pts[1], pts[0]).cross(new THREE.Vector3().subVectors(pts[2], pts[0])).normalize();
+    if (!uvs) { const t = new THREE.Vector3().subVectors(pts[1], pts[0]).normalize(), bt = new THREE.Vector3().crossVectors(n, t);
+      uvs = pts.map(p => { const d = new THREE.Vector3().subVectors(p, pts[0]); return [d.dot(t), d.dot(bt)]; }); }
+    for (let k = 1; k + 1 < pts.length; k++) for (const j of [0, k, k + 1]) {
+      const p = pts[j]; this.P.push(p.x, p.y, p.z); this.N.push(n.x, n.y, n.z); this.Cc.push(col.r, col.g, col.b); this.K.push(ink.r, ink.g, ink.b);
+      this.U.push(uvs[j][0], uvs[j][1]); this.S.push(pat, seed);
+    }
+  }
+  rect(o, r, u, w, h, col, ink, pat, seed) { const b = o.clone().addScaledVector(r, w); this.poly([o, b, b.clone().addScaledVector(u, h), o.clone().addScaledVector(u, h)], null, col, ink, pat, seed); }
+  build() {
+    const f = (a, n) => new THREE.Float32BufferAttribute(a, n), g = new THREE.BufferGeometry();
+    g.setAttribute('position', f(this.P, 3)); g.setAttribute('normal', f(this.N, 3)); g.setAttribute('color', f(this.Cc, 3));
+    g.setAttribute('aInk', f(this.K, 3)); g.setAttribute('aUV', f(this.U, 2)); g.setAttribute('aPS', f(this.S, 2));
+    g.computeBoundingBox(); g.computeBoundingSphere(); return g;
+  }
+}
+// ---------- 曲面也走版画着色 ----------
+function paint(geo, col, ink, pat, seed = rnd(0, 50), sc = 1) {
+  geo = ni(geo); const n = geo.attributes.position.count, uv = geo.attributes.uv, [sx, sy] = Array.isArray(sc) ? sc : [sc, sc];
+  const cA = new Float32Array(n * 3), kA = new Float32Array(n * 3), uA = new Float32Array(n * 2), sA = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    cA.set([col.r, col.g, col.b], i * 3); kA.set([ink.r, ink.g, ink.b], i * 3); sA.set([pat, seed], i * 2);
+    if (uv) uA.set([uv.getX(i) * sx, uv.getY(i) * sy], i * 2);
+  }
+  if (uv) geo.deleteAttribute('uv');
+  geo.setAttribute('color', new THREE.BufferAttribute(cA, 3)); geo.setAttribute('aInk', new THREE.BufferAttribute(kA, 3));
+  geo.setAttribute('aUV', new THREE.BufferAttribute(uA, 2)); geo.setAttribute('aPS', new THREE.BufferAttribute(sA, 2));
+  return geo;
+}
+// ---------- 会被扫描线“印”出来的版画材质（同《小星星》）：每个顶点带 aT，扫描线按世界高度往上切 ----------
+const uClock = {value: 99}, PRINT_RATE = '1.6';
+const ORIGIN = {x: 0, z: 0};
+const setT = (geo, t) => geo.setAttribute('aT', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count).fill(t), 1));
+const printDelay = (x, z) => .1 + Math.hypot(x - ORIGIN.x, z - ORIGIN.z) * .09;
+function printMatT() {
+  const m = new THREE.MeshStandardMaterial({vertexColors: true, roughness: .93, side: THREE.DoubleSide});
+  m.onBeforeCompile = function (sh) {
+    Object.assign(sh.uniforms, {uPaper, uClock});
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aInk; attribute vec2 aUV; attribute vec2 aPS; attribute float aT; uniform float uClock; varying vec3 vInk; varying vec2 vUV; varying vec2 vPS; varying float vLy; varying float vSc;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvInk = aInk; vUV = aUV; vPS = aPS; vSc = (uClock - aT) * ' + PRINT_RATE + '; vLy = (modelMatrix * vec4(transformed, 1.)).y;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + PRINT_GLSL + '\nuniform float uClock; varying float vSc;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vLy > vSc) discard;')
+      .replace('#include <color_fragment>', `diffuseColor.rgb = printInk(vColor, vInk, int(vPS.x + .5), vUV, vPS.y);
+        float printing = 1. - step(3.2, vSc);
+        if (!gl_FrontFacing && printing > .5) diffuseColor.rgb = uPaper;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        totalEmissiveRadiance += (1. - smoothstep(0., .06, abs(vLy - vSc))) * printing * vec3(1.5, 1.8, 2.6) + (gl_FrontFacing ? 0. : printing) * vec3(.55, .75, 1.25);`);
+  };
+  m.customProgramCacheKey = () => 'printT';
+  return m;
+}
+const TDEPTH = new THREE.MeshDepthMaterial({depthPacking: THREE.RGBADepthPacking, side: THREE.DoubleSide});
+TDEPTH.onBeforeCompile = sh => { Object.assign(sh.uniforms, {uClock});
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aT; uniform float uClock; varying float vSc; varying float vLy;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSc = (uClock - aT) * ' + PRINT_RATE + '; vLy = (modelMatrix * vec4(transformed, 1.)).y;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vSc; varying float vLy;')
+    .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vLy > vSc) discard;'); };
+TDEPTH.customProgramCacheKey = () => 'printTDepth';
+const TMAT = printMatT();
+// 一件东西：版画着色 + 开场被印出来（延迟按离桌子中心的距离算）
+function part(geo, col, ink, pat, sc, at) {
+  const g = paint(geo, C(col), C(ink), pat, rnd(0, 50), sc);
+  const m = new THREE.Mesh(g, TMAT); m.castShadow = m.receiveShadow = true; m.customDepthMaterial = TDEPTH; m.userData.at = at; return m;
+}
+const printable = [];
+function place(obj, x, z) {   // 放好以后，按世界位置给整件东西定开场印的时间
+  obj.updateMatrixWorld(true);
+  const t = printDelay(x, z);
+  obj.traverse(o => { if (o.isMesh && o.geometry.attributes.aInk) { setT(o.geometry, t + (o.userData.at || 0)); printable.push(o); } });
+}
+
+const world = new THREE.Group(); scene.add(world);
+const lateShow = [];
+
+// ---------- 画布贴图：纸、屏幕、手机都是画出来的 ----------
+const SERIF = '"Songti SC","Noto Serif SC","Libre Caslon Text",Georgia,serif', SANS = '"PingFang SC","Noto Sans SC","IBM Plex Sans",system-ui,sans-serif';
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.userData.c = c; return t;
+}
+function wrap(g, text, x, y, maxW, lh, maxLines = 9) {
+  const words = /[一-鿿]/.test(text) ? [...text] : text.split(/(\s+)/);
+  let line = '', n = 0;
+  for (const w of words) { const test = line + w; if (g.measureText(test).width > maxW && line.trim()) { g.fillText(line.trim(), x, y); y += lh; line = w.trim() ? w : ''; if (++n >= maxLines) return y; } else line = test; }
+  if (line.trim()) { g.fillText(line.trim(), x, y); y += lh; }
+  return y;
+}
+function paperBg(g, w, h, col = '#fffcf5') {
+  g.fillStyle = col; g.fillRect(0, 0, w, h);
+  for (let k = 0; k < 2600; k++) { g.fillStyle = `rgba(120,100,70,${mrnd(.015, .05)})`; g.fillRect(mrnd(0, w), mrnd(0, h), mrnd(1, 2.5), mrnd(.5, 1.5)); }
+}
+
+// ---------- 桌面：米白纸，上面印着几块色 ----------
+{
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200).rotateX(-Math.PI / 2).translate(0, -.02, 0), new THREE.MeshStandardMaterial({color: FLOOR, roughness: 1}));
+  floor.receiveShadow = true; world.add(floor);
+  const g = new GB();
+  const block = (x0, z0, x1, z1, y, col, ink, pat) => { const w = x1 - x0, d = z1 - z0; g.M.makeTranslation((x0 + x1) / 2, y, (z0 + z1) / 2); g.rect(Vt(-w / 2, 0, d / 2), X, NZ, w, d, C(col), C(ink), pat, rnd(0, 40)); };
+  block(-7, -9, 7, 9, .0005, '#f4eee1', '#f4eee1', 10);
+  block(-2.45, -6.1, 2.45, -2.25, .0015, '#b7c6f2', '#2d55d6', 0);     // 电脑底下一块淡蓝
+  block(-2.45, -2.25, 2.45, -2.13, .0016, '#2d55d6', '#2d55d6', 0);    // 前沿一道钴蓝细边
+  block(1.2, .6, 3.3, 3.4, .0015, '#f7dc94', '#efb021', 0);          // 手机底下一块淡黄
+  block(-3.4, 1.95, -1.25, 4.3, .0015, '#bad8a8', '#4f9e55', 0);         // 盆栽底下一块淡绿
+  const geo = g.build(); setT(geo, -99);
+  const board = new THREE.Mesh(geo, TMAT); board.receiveShadow = true; world.add(board);
+}
+
+// ---------- 笔记本：AI。盖子掀开，屏幕朝着你；结尾合上 ----------
+const LAP = {x: 0, z: -4.15, w: 3.3, d: 2.25};
+const laptop = new THREE.Group(), lid = new THREE.Group();
+laptop.position.set(LAP.x, 0, LAP.z); laptop.rotation.y = .05; world.add(laptop);
+const screenTex = canvasTex(1024, 640, () => {}); screenTex.center.set(.5, .5); screenTex.rotation = Math.PI;
+const screenMat = new THREE.MeshStandardMaterial({map: screenTex, emissive: C('#ffffff'), emissiveMap: screenTex, emissiveIntensity: .45, roughness: .8});
+{
+  const W = LAP.w, D = LAP.d, H = .15;
+  laptop.add(part(new RoundedBoxGeometry(W, H, D, 3, .06).translate(0, H / 2, 0), '#b8c8d3', '#7a8b9b', 0));
+  laptop.add(part(new THREE.BoxGeometry(W - .5, .02, .95).translate(0, H + .002, -.42), '#3e4757', '#3e4757', 0));   // 键盘凹槽
+  // 键：五排，几颗点缀色
+  const rows = [14, 14, 13, 12, 10], kw = (W - .62) / 14;
+  rows.forEach((n, r) => {
+    let x = -(W - .62) / 2; const z = -.82 + r * .175;
+    for (let i = 0; i < n; i++) {
+      let w = kw - .03; if (r === 4 && i === 4) w = kw * 5 - .03; if ((r === 2 && i === 12) || (r === 3 && (i === 0 || i === 11))) w = kw * 1.5 - .03;
+      const col = r === 0 && i === 0 ? '#e1352c' : r === 2 && i === 12 ? '#2d55d6' : r === 4 && i === 4 ? '#efb021' : '#f4eee1';
+      const ink = col === '#f4eee1' ? '#c9cebf' : col;
+      laptop.add(part(new RoundedBoxGeometry(w, .05, .14, 2, .015).translate(x + w / 2 + .015, H + .03, z), col, ink, 0));
+      x += w + .03; if (r === 4 && i === 4) {}
+    }
+  });
+  laptop.add(part(new RoundedBoxGeometry(1.15, .012, .68, 2, .01).translate(0, H + .004, .63), '#a9c3d9', '#7a8b9b', 0));   // 触控板
+  laptop.add(part(new THREE.BoxGeometry(.52, .008, .5).translate(1.12, H + .006, .62).rotateY(0), '#f7dc94', '#efb021', 0));        // 便利贴
+  laptop.add(part(new THREE.BoxGeometry(.34, .006, .04).translate(1.1, H + .012, .62), '#e1352c', '#e1352c', 0));
+  laptop.add(part(new THREE.BoxGeometry(.24, .006, .035).translate(1.07, H + .012, .72), '#3e4757', '#3e4757', 0));
+  // 盖子：绕后沿的铰链转。合上时贴着底座
+  lid.position.set(0, H, -D / 2); laptop.add(lid);
+  lid.add(part(new RoundedBoxGeometry(W, .09, D, 3, .05).translate(0, .045, D / 2), '#b8c8d3', '#7a8b9b', 0));
+  lid.add(part(new THREE.CylinderGeometry(.34, .34, .01, 32).translate(-.7, .095, D / 2 - .1), '#e1352c', '#b8261f', 2));   // 盖子外面的贴纸
+  lid.add(part(new THREE.CylinderGeometry(.14, .14, .012, 24).translate(-.7, .097, D / 2 - .1), '#f4eee1', '#f4eee1', 0));
+  lid.add(part(new THREE.BoxGeometry(.7, .01, .3).translate(.75, .095, D / 2 + .45).rotateY(0), '#efb021', '#c98e0e', 0));
+  lid.add(part(new THREE.BoxGeometry(W - .16, .006, D - .16).translate(0, -.004, D / 2), '#2b2f52', '#2b2f52', 0));        // 屏幕黑边
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(W - .36, D - .36).rotateX(Math.PI / 2).rotateY(Math.PI).translate(0, -.009, D / 2 + .02), screenMat);
+  lid.add(scr); scr.userData.showAt = 1.5; lateShow.push(scr);
+}
+const LID_OPEN = -1.86;
+lid.rotation.x = LID_OPEN;
+place(laptop, LAP.x, LAP.z);
+
+// ---------- 杯子：海魂纹，冒不出热气的咖啡 ----------
+{
+  const mug = new THREE.Group(); mug.position.set(2.2, 0, -1.3); world.add(mug);
+  mug.add(part(new THREE.CylinderGeometry(.42, .4, .9, 40, 1, true).translate(0, .45, 0), '#f4eee1', '#2d55d6', 12, [1.2, 1.4]));
+  mug.add(part(new THREE.CylinderGeometry(.4, .4, .02, 40).translate(0, .01, 0), '#f4eee1', '#f4eee1', 0));
+  mug.add(part(new THREE.CylinderGeometry(.39, .39, .02, 40).translate(0, .78, 0), '#5a3e2c', '#3a2618', 0));
+  mug.add(part(new THREE.TorusGeometry(.42, .03, 8, 40).rotateX(Math.PI / 2).translate(0, .9, 0), '#2d55d6', '#1f3ea8', 0));
+  mug.add(part(new THREE.TorusGeometry(.22, .06, 10, 24, Math.PI).rotateZ(-Math.PI / 2).translate(.42, .45, 0), '#2d55d6', '#1f3ea8', 0));
+  place(mug, 2.2, -1.3);
+}
+// ---------- 手机：每次出新状况就震一下，亮出一条通知 ----------
+const phoneTex = canvasTex(256, 512, () => {});
+const phoneMat = new THREE.MeshStandardMaterial({map: phoneTex, emissive: C('#ffffff'), emissiveMap: phoneTex, emissiveIntensity: 0, roughness: .5});
+const phone = new THREE.Group(); phone.position.set(2.2, 0, 2.0); phone.rotation.y = -.28; world.add(phone);
+{
+  phone.add(part(new RoundedBoxGeometry(.82, .09, 1.66, 3, .09).translate(0, .045, 0), '#3e4757', '#2b2f52', 0));
+  const ps = new THREE.Mesh(new THREE.PlaneGeometry(.72, 1.54).rotateX(-Math.PI / 2).translate(0, .092, 0), phoneMat); ps.userData.showAt = .75; lateShow.push(ps); phone.add(ps);
+  place(phone, 2.2, 2.0);
+}
+// ---------- 铅笔 ----------
+{
+  const pen = new THREE.Group(); pen.position.set(1.05, .065, 4.25); pen.rotation.y = .32; world.add(pen);
+  pen.add(part(new THREE.CylinderGeometry(.065, .065, 1.9, 6).rotateZ(Math.PI / 2), '#efb021', '#c98e0e', 3, [1, 4]));
+  pen.add(part(new THREE.ConeGeometry(.065, .22, 6).rotateZ(Math.PI / 2).translate(-1.06, 0, 0), '#e8c9a0', '#c9a87a', 0));
+  pen.add(part(new THREE.ConeGeometry(.022, .07, 6).rotateZ(Math.PI / 2).translate(-1.15, 0, 0), '#3e4757', '#3e4757', 0));
+  pen.add(part(new THREE.CylinderGeometry(.066, .066, .1, 12).rotateZ(Math.PI / 2).translate(1, 0, 0), '#b8c8d3', '#7a8b9b', 1));
+  pen.add(part(new THREE.CylinderGeometry(.062, .062, .14, 12).rotateZ(Math.PI / 2).translate(1.12, 0, 0), '#e9a3b4', '#c7798c', 0));
+  place(pen, 1.05, 4.25);
+}
+// ---------- 盆栽：朱红圆点盆 ----------
+{
+  const pot = new THREE.Group(); pot.position.set(-2.25, 0, 3.05); world.add(pot);
+  pot.add(part(new THREE.CylinderGeometry(.55, .42, .75, 32).translate(0, .375, 0), '#e1352c', '#b8261f', 2, [2, 1]));
+  pot.add(part(new THREE.CylinderGeometry(.58, .58, .12, 32).translate(0, .75, 0), '#e1352c', '#b8261f', 0));
+  pot.add(part(new THREE.CylinderGeometry(.5, .5, .02, 32).translate(0, .8, 0), '#8a6a4a', '#6d5238', 0));
+  const leaf = (a, tilt, len, col, ink) => { const g = new THREE.SphereGeometry(.17, 14, 10).scale(1, .38, len).translate(0, 0, len * .17);
+    g.rotateX(-tilt).rotateY(a).translate(0, .86, 0); return part(g, col, ink, 7, [2, 2]); };
+  for (let i = 0; i < 9; i++) pot.add(leaf(i / 9 * Math.PI * 2 + .2, .45, 2.4, i % 2 ? '#5f9e4a' : '#8fb55a', '#3e8e5e'));
+  for (let i = 0; i < 6; i++) pot.add(leaf(i / 6 * Math.PI * 2 + .7, .95, 1.6, '#b5c95a', '#5f9e4a'));
+  place(pot, -2.25, 3.05);
+}
+
+// ---------- 纸：那张“撞图”的海报压在最底下，AI 写的文件一张张印出来落在上面 ----------
+const PILE = {x: -.3, z: .6}, PW = 1.84, PH = 2.6;
+const posterTex = canvasTex(512, 724, (g, w, h) => {
+  paperBg(g, w, h, '#fffaf1');
+  g.save(); g.beginPath(); g.rect(40, 40, w - 80, h - 200); g.clip();
+  const s = 72;
+  for (let y = 40 + s; y < h; y += s * .9) for (let x = 40 - (Math.round(y / s) % 2) * s / 2; x < w; x += s) {
+    g.fillStyle = '#2d55d6'; g.beginPath(); g.arc(x + s / 2, y, s / 2, Math.PI, 0); g.fill();
+    g.fillStyle = '#e1352c'; g.beginPath(); g.arc(x + s / 2, y, s / 4, Math.PI, 0); g.fill();
+    g.beginPath(); g.arc(x + s / 2, y - s * .72, 6, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+  g.fillStyle = '#2b2f52'; g.fillRect(40, h - 130, 230, 22); g.fillStyle = '#9a958b'; g.fillRect(40, h - 92, 150, 10); g.fillRect(40, h - 72, 190, 10);
+});
+{
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({map: posterTex, roughness: 1}));
+  m.position.set(PILE.x - .3, .016, PILE.z - .2); m.rotation.y = .16; m.receiveShadow = true; world.add(m);
+  const sheet = part(new THREE.BoxGeometry(PW, .014, PH).translate(0, .007, 0), '#fffaf1', '#e6dac4', 10); sheet.position.copy(m.position).setY(0); sheet.rotation.y = .16; world.add(sheet); place(sheet, PILE.x, PILE.z);
+}
+function letterTex(d, name, compact) {
+  return canvasTex(560, 792, (g, w, h) => {
+    paperBg(g, w, h);
+    const m = compact ? 46 : 52;
+    g.fillStyle = '#2b2f52'; g.beginPath(); g.arc(m + 10, m + 8, 10, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fbf7ee'; g.beginPath(); g.arc(m + 10, m + 8, 4.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2b2f52'; g.font = `600 17px ${SANS}`; g.textBaseline = 'middle'; g.fillText('S T U D I O', m + 30, m + 9);
+    g.fillStyle = '#8a857c'; g.font = `400 15px ${SANS}`; g.textAlign = 'right'; g.fillText('06.11.26', w - m, m + 9); g.textAlign = 'left';
+    g.textBaseline = 'alphabetic'; g.fillStyle = '#8a857c'; g.font = `400 16px ${SANS}`; g.fillText(d.file, m, m + 58);
+    g.fillStyle = '#d8d2c6'; g.fillRect(m, m + 70, w - 2 * m, 2);
+    g.fillStyle = '#26283a'; g.font = `400 ${compact ? 30 : 27}px ${SERIF}`;
+    let y = m + 118;
+    for (const t of (Array.isArray(d.body) ? d.body : [d.body])) y = wrap(g, t, m, y, w - 2 * m, compact ? 42 : 40) + 12;
+    y += 8; g.fillStyle = '#d6d0c4';
+    const nLines = compact ? 4 : 6;
+    for (let i = 0; i < nLines; i++) { g.fillRect(m, y, (i === nLines - 1 ? mrnd(.3, .55) : mrnd(.8, 1)) * (w - 2 * m), 6); y += 18; }
+    y = Math.max(y + 40, h - 150);
+    g.fillStyle = '#8f8a81'; g.fillRect(m, y, 200, 2);
+    g.fillStyle = '#2b2f52'; g.font = `italic 400 28px ${SERIF}`; g.fillText(name, m, y + 40);
+    g.userData = {sigY: (y + 10) / h};
+  });
+}
+const letters = [];
+function letterMat(tex) {
+  const m = new THREE.MeshStandardMaterial({map: tex, emissive: C('#ffffff'), emissiveMap: tex, emissiveIntensity: .16, roughness: 1, side: THREE.DoubleSide});
+  m.userData.rev = {value: 0};
+  m.onBeforeCompile = sh => {   // 扫描线从纸头往下“印”出这张纸
+    sh.uniforms.uRev = m.userData.rev;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vRv;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvRv = uv.y;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uRev; varying float vRv;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vRv < 1. - uRev * 1.05) discard;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += (1. - smoothstep(0., .03, abs(vRv - (1. - uRev * 1.05)))) * step(uRev, .99) * vec3(1.5, 1.8, 2.6);');
+  };
+  m.customProgramCacheKey = () => 'letter';
+  return m;
+}
+const flagGeo = paint(new THREE.BoxGeometry(.34, .01, .13), C('#efb021'), C('#c98e0e'), 0, 3);
+const flagMat = new THREE.MeshStandardMaterial({vertexColors: true, roughness: .9});
+flagMat.onBeforeCompile = sh => { Object.assign(sh.uniforms, {uPaper});
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aInk; attribute vec2 aUV; attribute vec2 aPS; varying vec3 vInk; varying vec2 vUV; varying vec2 vPS; varying float vLy;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvInk = aInk; vUV = aUV; vPS = aPS; vLy = 0.;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + PRINT_GLSL).replace('#include <color_fragment>', 'diffuseColor.rgb = printInk(vColor, vInk, int(vPS.x + .5), vUV, vPS.y);'); };
+flagMat.customProgramCacheKey = () => 'flag';
+function spawnLetter(d, name, o, t0) {
+  const tex = letterTex(d, name, o.compact), mat = letterMat(tex);
+  const s = o.compact ? .82 : 1, grp = new THREE.Group();
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(PW * s, PH * s).rotateX(-Math.PI / 2), mat); sheet.castShadow = sheet.receiveShadow = true; grp.add(sheet);
+  const flag = new THREE.Mesh(flagGeo, flagMat); flag.castShadow = true;
+  flag.position.set(PW * s / 2 + .05, .004, PH * s * (tex.userData.c.getContext('2d').userData?.sigY ?? .8) - PH * s / 2); grp.add(flag);
+  const n = letters.length, y = .028 + n * .012;
+  grp.position.set(PILE.x + o.x, y, PILE.z + o.z); grp.rotation.y = o.r;
+  grp.userData = {t0, y, x: grp.position.x, z: grp.position.z, r: o.r, mat, flag};
+  grp.visible = false; world.add(grp); letters.push(grp);
+}
+function clearLetters() { for (const l of letters) { world.remove(l); l.userData.mat.map.dispose(); l.userData.mat.dispose(); l.children[0].geometry.dispose(); } letters.length = 0; }
+
+// ---------- 屏幕和手机上的画面 ----------
+const chat = [];
+function drawScreen() {
+  const c = screenTex.userData.c, g = c.getContext('2d'), w = c.width, h = c.height;
+  g.fillStyle = '#f4eee1'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#e6dac4'; g.fillRect(0, 0, w, 54); g.fillRect(0, 54, 210, h);
+  [['#e1352c', 30], ['#efb021', 58], ['#4f9e55', 86]].forEach(([c2, x]) => { g.fillStyle = c2; g.beginPath(); g.arc(x, 27, 9, 0, Math.PI * 2); g.fill(); });
+  g.fillStyle = '#c9bfa9'; for (let i = 0; i < 6; i++) g.fillRect(28, 96 + i * 50, i ? 130 : 150, 14);
+  g.fillStyle = '#2d55d6'; g.fillRect(28, 96, 150, 14);
+  let y = h - 90; g.font = `400 26px ${SANS}`; g.textBaseline = 'top';
+  for (let i = chat.length - 1; i >= 0 && y > 70; i--) {
+    const m = chat[i], lines = []; let line = '';
+    const words = /[一-鿿]/.test(m.t) ? [...m.t] : m.t.split(/(\s+)/);
+    for (const wd of words) { const test = line + wd; if (g.measureText(test).width > 520 && line.trim()) { lines.push(line.trim()); line = wd.trim() ? wd : ''; } else line = test; }
+    if (line.trim()) lines.push(line.trim());
+    const bh = lines.length * 34 + 26, bw = Math.min(560, Math.max(...lines.map(l => g.measureText(l).width)) + 40);
+    y -= bh + 16; const x = m.ai ? 240 : w - 30 - bw;
+    g.fillStyle = m.ai ? '#ffffff' : '#2d55d6'; g.strokeStyle = '#2b2f52'; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(x, y, bw, bh, 12); g.fill(); g.stroke();
+    g.fillStyle = m.ai ? '#2b2f52' : '#f4eee1'; lines.forEach((l, k) => g.fillText(l, x + 20, y + 13 + k * 34));
+  }
+  g.fillStyle = '#fbf7ee'; g.fillRect(240, h - 62, w - 270, 40); g.strokeStyle = '#c9bfa9'; g.lineWidth = 2; g.strokeRect(240, h - 62, w - 270, 40);
+  screenTex.needsUpdate = true;
+}
+const pings = [];
+function drawPhone(time, day) {
+  const c = phoneTex.userData.c, g = c.getContext('2d'), w = c.width, h = c.height;
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2d55d6'); gr.addColorStop(1, '#e9a3b4');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#f4eee1'; g.textAlign = 'center'; g.font = `400 13px ${SANS}`; g.fillText(day, w / 2, 46);
+  g.font = `500 54px ${SANS}`; g.fillText(time, w / 2, 102); g.textAlign = 'left';
+  let y = 130;
+  for (const p of pings) {
+    g.fillStyle = 'rgba(251,247,238,.94)'; g.beginPath(); g.roundRect(14, y, w - 28, 66, 12); g.fill();
+    g.fillStyle = p.c; g.beginPath(); g.roundRect(24, y + 12, 22, 22, 6); g.fill();
+    g.fillStyle = '#2b2f52'; g.font = `600 15px ${SANS}`; g.fillText(p.t, 56, y + 28);
+    g.font = `400 13px ${SANS}`; g.fillStyle = '#4a4a55'; wrap(g, p.m, 56, y + 48, w - 84, 16, 1);
+    y += 74;
+  }
+  phoneTex.needsUpdate = true;
+}
+
+// ---------- 窗光 + 浮尘 ----------
+const WIN_GLSL = `
+    float win(vec3 p){
+      float h = 10. - p.y, soft = .06 + h * .028;
+      vec2 q = p.xz - uSun.xz / uSun.y * p.y - uWin;
+      q = mat2(.95, -.31, .31, .95) * q;
+      vec2 hw = vec2(17., 16.), pane = hw;
+      vec2 a = abs(q) - hw; float inside = 1. - smoothstep(-soft, soft, max(a.x, a.y));
+      vec2 m = mod(q + hw, pane), d = min(m, pane - m);
+      float bar = 1. - smoothstep(.3 - soft, .3 + soft, min(d.x, d.y));
+      return inside * (1. - bar); }`;
+const uWin = {value: new THREE.Vector2(-3.4, -7.6)};
+const pScale = {value: CH / (2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)))};
+const NDU = 120, duPos = new Float32Array(NDU * 3), duSeed = new Float32Array(NDU);
+for (let i = 0; i < NDU; i++) { duPos.set([rnd(-6, 6), rnd(.15, 4.5), rnd(-8, 8)], i * 3); duSeed[i] = rnd(0, 100); }
+const duGeo = new THREE.BufferGeometry(); duGeo.setAttribute('position', new THREE.BufferAttribute(duPos, 3)); duGeo.setAttribute('aSeed', new THREE.BufferAttribute(duSeed, 1));
+const dustU = {uScale: pScale, uTime: {value: 0}, tShadow: {value: null}, uShadowMat: {value: sun.shadow.matrix}, uOn: {value: 0}, uSun: {value: SUN_DIR}, uWin};
+const dust = new THREE.Points(duGeo, new THREE.ShaderMaterial({
+  uniforms: dustU, transparent: true, depthWrite: false,
+  vertexShader: `#include <packing>
+    attribute float aSeed; uniform float uScale, uTime, uOn; uniform vec3 uSun; uniform vec2 uWin; uniform sampler2D tShadow; uniform mat4 uShadowMat; varying float vA;
+    ${WIN_GLSL}
+    void main(){ vec3 p = position + vec3(sin(uTime * .21 + aSeed) * .5, sin(uTime * .27 + aSeed * 1.7) * .25, cos(uTime * .19 + aSeed * 2.3) * .5);
+      vec4 s = uShadowMat * vec4(p, 1.); float lit = 1.;
+      if (s.x > 0. && s.x < 1. && s.y > 0. && s.y < 1.) lit = step(s.z - .002, unpackRGBAToDepth(texture2D(tShadow, s.xy)));
+      vA = 1.3 * lit * win(p) * (.35 + .65 * pow(.5 + .5 * sin(uTime * 1.3 + aSeed * 5.), 2.)) * smoothstep(5., 2.5, p.y) * uOn;
+      vec4 mv = modelViewMatrix * vec4(p, 1.); gl_PointSize = uScale * .016 * (.6 + fract(aSeed) * .8) / -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying float vA; void main(){ float a = smoothstep(.5, .1, length(gl_PointCoord - .5)) * vA; gl_FragColor = vec4(1.6, 1.38, 1.02, a); }`,
+}));
+dust.frustumCulled = false; dust.renderOrder = 6; scene.add(dust);
+
+// ---------- 后期：体积光（含版画墨线）→ 轻辉光 → 移轴 → 套色错版（同《小星星》，步数减半给手机用） ----------
+const rt = new THREE.WebGLRenderTarget(CW, CH, {type: THREE.HalfFloatType, samples: 4, depthTexture: new THREE.DepthTexture(CW, CH)});
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene, camera));
+const VolShader = {
+  uniforms: {tDiffuse: {value: null}, tDepth: {value: null}, tShadow: {value: null}, uProjInv: {value: null}, uCamWorld: {value: null},
+    uShadowMat: {value: null}, uLit: {value: new THREE.Vector3(1.5, 1.22, .8)}, uAmb: {value: new THREE.Vector3(0, 0, 0)},
+    uDens: {value: .007}, uFall: {value: 3}, uTop: {value: 7}, uFrame: {value: 0}, uSun: {value: SUN_DIR}, uShade: {value: .5}, uWin: {value: null},
+    uRes: {value: new THREE.Vector2(CW, CH)}, uNear: {value: camera.near}, uFar: {value: camera.far}, uLine: {value: .62}, uSeed: {value: 0}},
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+  fragmentShader: `#include <packing>
+    uniform sampler2D tDiffuse, tDepth, tShadow; uniform mat4 uProjInv, uCamWorld, uShadowMat;
+    uniform vec3 uLit, uAmb, uSun; uniform vec2 uWin; uniform float uDens, uFall, uTop, uFrame, uShade; varying vec2 vUv;
+    uniform vec2 uRes; uniform float uNear, uFar, uLine, uSeed;
+${WIN_GLSL}
+    float ph(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+    float pn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(ph(i), ph(i + vec2(1, 0)), f.x), mix(ph(i + vec2(0, 1)), ph(i + 1.), f.x), f.y); }
+    float lz(vec2 uv){ float d = texture2D(tDepth, uv).x; return uNear * uFar / (uFar - d * (uFar - uNear)); }
+    vec3 printFx(vec3 c){
+      vec2 px = 1. / uRes; float z = lz(vUv), e = 0.;
+      e = max(e, (lz(vUv + vec2(px.x, 0.) * 1.3) - z) / z); e = max(e, (lz(vUv - vec2(px.x, 0.) * 1.3) - z) / z);
+      e = max(e, (lz(vUv + vec2(0., px.y) * 1.3) - z) / z); e = max(e, (lz(vUv - vec2(0., px.y) * 1.3) - z) / z);
+      float line = smoothstep(.004, .016, e) * step(texture2D(tDepth, vUv).x, .9999);
+      line *= .55 + .45 * smoothstep(.25, .6, pn(vUv * uRes / 7. + 3.1));
+      c = mix(c, vec3(.17, .15, .16), line * uLine);
+      vec2 g = vUv * uRes;
+      float fib = pn(vec2(g.x * .9, g.y * .06) + 11.) * .6 + pn(vec2(g.x * .05, g.y * 1.1) + 5.) * .4, blot = pn(g / 90.) * .6 + pn(g / 23.) * .4;
+      float lum = dot(c, vec3(.299, .587, .114));
+      c *= .965 + .05 * fib + .03 * (blot - .5);
+      c = mix(c, c * vec3(1.02, 1., .96), smoothstep(.55, .95, lum) * .5);
+      c *= 1. - step(.72, ph(floor(g / 1.5) + uSeed)) * smoothstep(.42, .12, lum) * .16;
+      return c; }
+    float lit(vec3 p){ float c = win(p); vec4 s = uShadowMat * vec4(p, 1.);
+      if (s.x < 0. || s.x > 1. || s.y < 0. || s.y > 1. || s.z > 1.) return c;
+      return c * step(s.z - .0015, unpackRGBAToDepth(texture2D(tShadow, s.xy))); }
+    void main(){
+      vec4 src = texture2D(tDiffuse, vUv);
+      float d = texture2D(tDepth, vUv).x;
+      vec4 v = uProjInv * vec4(vUv * 2. - 1., d * 2. - 1., 1.); v /= v.w;
+      vec3 o = uCamWorld[3].xyz, rd = (uCamWorld * v).xyz - o; float tMax = length(rd); rd /= tMax;
+      if (rd.y > -.001) { gl_FragColor = vec4(printFx(src.rgb), src.a); return; }
+      vec3 wp = o + rd * tMax;
+      vec3 nn = normalize(cross(dFdx(wp), dFdy(wp))); if (dot(nn, rd) > 0.) nn = -nn;
+      float wv = win(wp);
+      src.rgb *= (1. - (1. - wv) * uShade * smoothstep(-.05, .35, dot(nn, uSun))) * mix(.8, 1., smoothstep(0., 1., wv));
+      float t0 = max(0., (uTop - o.y) / rd.y), t1 = min(min(tMax, (-.4 - o.y) / rd.y), t0 + 20.);
+      if (t1 <= t0) { gl_FragColor = vec4(printFx(src.rgb), src.a); return; }
+      const int N = 24; float dt = (t1 - t0) / float(N);
+      float j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715))) + uFrame * .618034);
+      vec3 sc = vec3(0.); float tr = 1.;
+      for (int i = 0; i < N; i++) {
+        vec3 p = o + rd * (t0 + (float(i) + j) * dt);
+        float sg = uDens * exp(-max(p.y, 0.) / uFall) * dt;
+        sc += tr * sg * (uAmb + uLit * lit(p)); tr *= exp(-sg);
+      }
+      gl_FragColor = vec4(printFx(src.rgb * tr + sc), src.a);
+    }`,
+};
+class VolPass extends ShaderPass {
+  render(r, w, rd, dt, m) { this.uniforms.tDepth.value = rd.depthTexture; this.uniforms.tShadow.value = sun.shadow.map ? sun.shadow.map.texture : null; this.uniforms.uFrame.value++; super.render(r, w, rd, dt, m); }
+}
+const vol = new VolPass(VolShader);
+Object.assign(vol.uniforms, {uProjInv: {value: camera.projectionMatrixInverse}, uCamWorld: {value: camera.matrixWorld}, uShadowMat: {value: sun.shadow.matrix}, uWin});
+composer.addPass(vol);
+const bloom = new UnrealBloomPass(new THREE.Vector2(CW / 2, CH / 2), .3, .2, 1.1);
+composer.addPass(bloom);
+const TiltShift = {
+  uniforms: {tDiffuse: {value: null}, uDir: {value: new THREE.Vector2(1, 0)}, uRes: {value: new THREE.Vector2(CW, CH)}, uFocus: {value: .54}, uBand: {value: .27}, uAmt: {value: 1.0}},
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uDir, uRes; uniform float uFocus, uBand, uAmt; varying vec2 vUv;
+    void main(){ float b = smoothstep(uBand, uBand + .3, abs(vUv.y - uFocus)) * uAmt;
+      vec4 s = vec4(0.); float tw = 0.;
+      for (int i = -6; i <= 6; i++) { float w = exp(-float(i * i) / 20.); s += texture2D(tDiffuse, vUv + uDir * float(i) * b / uRes) * w; tw += w; }
+      gl_FragColor = s / tw; }`,
+};
+const tiltH = new ShaderPass(TiltShift), tiltV = new ShaderPass(TiltShift);
+tiltV.uniforms.uDir.value.set(0, 1);
+composer.addPass(tiltH); composer.addPass(tiltV);
+const misreg = new ShaderPass({
+  uniforms: {tDiffuse: {value: null}, uRes: {value: new THREE.Vector2(CW, CH)}, uMis: {value: .8}},
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uMis; varying vec2 vUv;
+    void main(){ vec2 o = vec2(1., .55) * uMis / uRes;
+      vec4 c = texture2D(tDiffuse, vUv); c.r = texture2D(tDiffuse, vUv + o).r; c.b = texture2D(tDiffuse, vUv - o * vec2(.6, -1.)).b;
+      gl_FragColor = c; }`,
+});
+composer.addPass(misreg);
+composer.addPass(new OutputPass());
+
+// ---------- 镜头：斜俯视，像在看一张桌上的微缩模型 ----------
+const CAMV = {x: 0, y: 0, z: -2.1, d: 29, el: 62, az: .0};
+function placeCamera(c) {
+  const el = THREE.MathUtils.degToRad(c.el);
+  camera.position.set(c.x + Math.sin(c.az) * Math.cos(el) * c.d, c.y + Math.sin(el) * c.d, c.z + Math.cos(c.az) * Math.cos(el) * c.d);
+  camera.lookAt(c.x, c.y, c.z); camera.updateMatrixWorld();
+}
+placeCamera(CAMV);
+
+// ---------- 故事 ----------
+const UI={
+  en:{ai:'Assistant',you:'You',choose:'Choose what you say',tap:'Tap to continue',offline:'Assistant is offline.',again:'Play again',switchTo:'中',name:'[Your Name]',day:'Friday 6 November',loading:'Loading the desk…',claim:'Our last job is\nto take responsibility for AI.'},
+  zh:{ai:'助手',you:'你',choose:'选择你要说的话',tap:'点击继续',offline:'助手已离线',again:'再看一次',switchTo:'EN',name:'[你的名字]',day:'11月6日 星期五',loading:'正在摆桌子……',claim:'我们最后的工作，\n是替 AI 承担责任。'}
+};
+const PINGS={
+  en:[{c:'#2d55d6',t:'Client',m:'Re: Poster. Call me. Now.',time:'15:12'},{c:'#4f9e55',t:'3 missed calls',m:'Unknown number',time:'16:05'},
+      {c:'#e1352c',t:'Boss',m:'My office. 5 minutes.',time:'17:18'},{c:'#efb021',t:'Calendar',m:'Meeting with client, in 10 min',time:'18:36'}],
+  zh:[{c:'#2d55d6',t:'客户',m:'海报的事，马上回电话。',time:'15:12'},{c:'#4f9e55',t:'3 个未接来电',m:'未知号码',time:'16:05'},
+      {c:'#e1352c',t:'老板',m:'五分钟后来我办公室。',time:'17:18'},{c:'#efb021',t:'日历',m:'与客户的会议，10 分钟后',time:'18:36'}]
+};
+const STORY={
+  en:[
+    {you:'We have a problem. The poster you made, in the direction I picked: the pattern is almost identical to an illustrator’s work.'},
+    {ai:'You’re absolutely right, and I’m so sorry! That’s my mistake. I’ve made three new versions. Want to see them?'},
+    {choice:[
+      {you:'That’s not the point. The client is furious. They want an explanation.',ai:'Of course! Here’s a sincere apology letter.',
+        doc:{file:'apology_letter_final.docx',body:['Dear client,','We deeply regret this oversight and take full responsibility for it.','Sincerely,']}},
+      {you:'That’s not the point. The client wants a public apology.',ai:'No problem! Your public statement is ready.',
+        doc:{file:'public_statement.docx',body:['Statement','We are aware of the issue and sincerely apologise for it.']}}
+    ]},
+    {choice:[
+      {you:'Their lawyer has written to us as well.',ai:'I’ve drafted a reply: professional, yet polite.',
+        doc:{file:'reply_to_counsel.docx',body:['Dear Counsel,','I acknowledge your letter and will answer these concerns in person.','Yours faithfully,']}},
+      {you:'The illustrator posted online that we copied their work.',ai:'I’ve written a response: calm and sincere.',
+        doc:{file:'online_response.txt',body:['To everyone who raised this:','I take full personal responsibility for any distress caused.']}}
+    ]},
+    {choice:[
+      {you:'My boss says someone has to take responsibility.',ai:'Understood! I’ve prepared three resignation letters: sincere, concise and moving.',
+        trio:[{file:'Sincere',body:'This was my responsibility.'},{file:'Concise',body:'I resign.'},{file:'Moving',body:'It is with a heavy heart…'}]},
+      {you:'My boss is asking whose fault this is.',ai:'It’s my fault! I’ve already written the incident report.',
+        doc:{file:'incident_report.docx',body:['Incident report','After review, I was responsible for this issue.']}}
+    ]},
+    {you:'…Didn’t you say it was your mistake?'},
+    {ai:'Yes. It was entirely my mistake.'},
+    {choice:[
+      {you:'Then you go and tell them.',ai:'I’m sorry, I can’t attend. Your speech is already on your desk.',
+        doc:{file:'speech.docx',body:['Speech','I take full responsibility for what happened.']}},
+      {you:'Then you run the meeting.',ai:'I’m sorry, I can’t attend. Your speech is already on your desk.',
+        doc:{file:'speech.docx',body:['Speech','I take full responsibility for what happened.']}}
+    ]},
+    {end:true}
+  ],
+  zh:[
+    {you:'出事了。你按我选的方向做的那张海报，图案和一位插画师的作品几乎一样。'},
+    {ai:'你说得对，非常抱歉！这是我的错。我已经重新生成了三版，要看看吗？'},
+    {choice:[
+      {you:'不是这个问题。客户很生气，要一个说法。',ai:'当然！这是一封诚恳的致歉信。',
+        doc:{file:'致歉信_定稿.docx',body:['尊敬的客户：','对于此次疏忽，我们深表歉意，并承担全部责任。','此致']}},
+      {you:'不是这个问题。客户要求我们公开道歉。',ai:'没问题！公开声明已经写好了。',
+        doc:{file:'公开声明.docx',body:['声明','我们已注意到相关问题，并对此深表歉意。']}}
+    ]},
+    {choice:[
+      {you:'对方律师也来信了。',ai:'我起草了一份回复，专业又不失礼貌。',
+        doc:{file:'律师回函.docx',body:['律师您好：','来函已收到，相关问题我本人将当面回应。','此致']}},
+      {you:'插画师在网上发文，说我们抄袭。',ai:'我写了一份回应，语气克制、态度诚恳。',
+        doc:{file:'网络回应.txt',body:['致所有关注此事的人：','对于给您带来的困扰，我个人承担全部责任。']}}
+    ]},
+    {choice:[
+      {you:'老板说，必须有人出来负责。',ai:'明白！我准备了三版辞职信：诚恳版、简洁版、感人版。',
+        trio:[{file:'诚恳版',body:'这是我的责任。'},{file:'简洁版',body:'我辞职。'},{file:'感人版',body:'怀着沉重的心情……'}]},
+      {you:'老板问，这到底是谁的错？',ai:'是我的错！我已经写好了情况说明。',
+        doc:{file:'情况说明.docx',body:['情况说明','经核查，此次问题责任在我。']}}
+    ]},
+    {you:'……你不是说是你的错吗？'},
+    {ai:'是的，完全是我的错。'},
+    {choice:[
+      {you:'那你去跟他们说。',ai:'抱歉，我无法出席。发言稿已经放在你桌上了。',
+        doc:{file:'发言稿.docx',body:['发言稿','对于此次事件，我愿意承担全部责任。']}},
+      {you:'那你来开这个会。',ai:'抱歉，我无法出席。发言稿已经放在你桌上了。',
+        doc:{file:'发言稿.docx',body:['发言稿','对于此次事件，我愿意承担全部责任。']}}
+    ]},
+    {end:true}
+  ]
+};
+
+
+const stage = $('stage');
+let lang = new URLSearchParams(location.search).get('lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+let run = 0, tapResolve = null, closed = false, taps = 0, offlineTimer = 0;
+const AUTO = window.__auto || (STILL ? {path: [1, 0, 0, 1], still: true} : null);
+
+function fit() { const s = Math.min(innerWidth / 390, innerHeight / 844); stage.style.transform = 'scale(' + s + ')'; }
+addEventListener('resize', fit); fit();
+
+const sleep = ms => new Promise(r => setTimeout(r, AUTO ? 0 : ms));
+function tap() {
+  const u = UI[lang];
+  if (taps < 2) { $('hint').textContent = u.tap; $('hint').classList.add('on'); }
+  return new Promise(r => { tapResolve = () => { tapResolve = null; taps++; $('hint').classList.remove('on'); r(); }; if (AUTO) setTimeout(tapResolve, 0); });
+}
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+stage.addEventListener('pointerdown', e => {
+  if (e.target.closest('button')) return;
+  if (closed) {
+    const r = $('gl').getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+    ray.setFromCamera(ndc, camera); if (ray.intersectObject(laptop, true).length) { showOffline(); return; }
+  }
+  if (tapResolve) tapResolve();
+});
+
+function showYou(t) { $('youText').textContent = t; $('you').classList.add('on'); chat.push({ai: false, t}); drawScreen(); }
+function showAI(t) {
+  const b = $('ai'); b.classList.remove('on'); void b.offsetWidth;
+  $('aiText').textContent = t; b.classList.add('on'); chat.push({ai: true, t}); drawScreen(); talkT = T;
+}
+async function drop(opt, id) {
+  const name = UI[lang].name, n = letters.length, j = .08 + n * .07;   // 纸越堆越乱
+  if (opt.doc) { spawnLetter(opt.doc, name, {x: mrnd(-j, j), z: mrnd(-j * .7, j * .5), r: mrnd(-.06 - n * .03, .06 + n * .03)}, T); return; }
+  if (opt.trio) {
+    const pos = [{x: -.62, z: .12, r: .22}, {x: .02, z: -.12, r: -.04}, {x: .66, z: .16, r: -.24}];
+    for (let i = 0; i < opt.trio.length; i++) { if (id !== run) return; spawnLetter(opt.trio[i], name, {...pos[i], compact: true}, T); await sleep(260); }
+  }
+}
+function choose(opts) {
+  const box = $('choices'), u = UI[lang];
+  box.textContent = '';
+  const l = document.createElement('div'); l.className = 'label'; l.textContent = u.choose; box.appendChild(l);
+  $('you').classList.remove('on');
+  return new Promise(res => {
+    opts.forEach((o, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = o.you;
+      b.addEventListener('click', () => { box.hidden = true; res(i); });
+      box.appendChild(b);
+    });
+    box.hidden = false;
+    if (AUTO) setTimeout(() => { box.hidden = true; res((AUTO.path || [])[AUTO.k = (AUTO.k || 0) + 1, AUTO.k - 1] || 0); }, 0);
+  });
+}
+let buzzT = -9, talkT = -9, closeT = -1;
+function ping(i) {
+  const p = PINGS[lang][i]; if (!p) return;
+  pings.unshift(p); if (pings.length > 4) pings.pop();
+  drawPhone(p.time, UI[lang].day); phoneMat.emissiveIntensity = .9; buzzT = T;
+}
+function showOffline() {
+  const o = $('offline'); o.textContent = UI[lang].offline; o.classList.add('on');
+  clearTimeout(offlineTimer); offlineTimer = setTimeout(() => o.classList.remove('on'), 1800);
+}
+function reset() {
+  clearLetters(); chat.length = 0; pings.length = 0; drawScreen(); drawPhone('', ''); phoneMat.emissiveIntensity = 0;
+  closeT = -1; lid.rotation.x = LID_OPEN; screenMat.emissiveIntensity = .45; closed = false;
+  ['ai', 'you', 'hint', 'offline', 'end'].forEach(id => $(id).classList.remove('on'));
+  $('choices').hidden = true; tapResolve = null;
+  const u = UI[lang];
+  $('aiLabel').textContent = u.ai; $('youLabel').textContent = u.you; $('claim').textContent = u.claim; $('again').textContent = u.again; $('lang').textContent = u.switchTo;
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+}
+async function play(reprint) {
+  const id = ++run; reset(); taps = 0;
+  if (reprint) { T = 0; await sleep(1500); } else await sleep(400);
+  if (id !== run) return;
+  const steps = STORY[lang]; let ci = 0;
+  for (const step of steps) {
+    if (id !== run) return;
+    if (step.you) { showYou(step.you); await tap(); }
+    else if (step.ai) { showAI(step.ai); await tap(); }
+    else if (step.choice) {
+      ping(ci++); await sleep(900); if (id !== run) return;
+      const i = await choose(step.choice); if (id !== run) return;
+      const o = step.choice[i];
+      showYou(o.you); await sleep(650); if (id !== run) return;
+      showAI(o.ai); await sleep(250); await drop(o, id); if (id !== run) return;
+      await tap();
+    }
+    else if (step.end) {
+      if (AUTO && AUTO.still) { stage.classList.add('still'); return; }
+      await sleep(500);
+      $('ai').classList.remove('on'); $('you').classList.remove('on');
+      closeT = T; closed = true;
+      await sleep(1600); phoneMat.emissiveIntensity = 0;
+      await sleep(1800); if (id !== run) return;
+      $('end').classList.add('on');
+    }
+  }
+}
+
+// ---------- 主循环 ----------
+let T = 0, last = performance.now();
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+function frame(now) {
+  const dt = clamp((now - last) / 1000, 0, .05); last = now; T += dt;
+  uClock.value = T;
+  for (const m of lateShow) m.visible = T > m.userData.showAt;
+  // 纸：从空中落下，同时被扫描线从纸头往下印出来
+  for (const l of letters) {
+    const u = l.userData, a = T - u.t0; if (a < 0) continue; l.visible = true;
+    const f = clamp(a / .75, 0, 1), e = 1 - Math.pow(1 - f, 3);
+    l.position.y = u.y + (1 - e) * 2.2; l.rotation.y = u.r + (1 - e) * .5; l.rotation.z = Math.sin(f * Math.PI * 2) * (1 - f) * .12;
+    u.mat.userData.rev.value = clamp(a / .55, 0, 1); u.flag.visible = a > .5;
+  }
+  // 手机：震一下
+  const ba = T - buzzT; phone.position.x = 2.2 + (ba < .6 ? Math.sin(ba * 90) * .03 * (1 - ba / .6) : 0);
+  // 屏幕：AI 说话时亮一下；结尾盖子合上
+  screenMat.emissiveIntensity = closeT < 0 ? .45 + .3 * Math.exp(-(T - talkT) * 4) : Math.max(0, .45 * (1 - (T - closeT) / .5));
+  if (closeT >= 0) lid.rotation.x = lerp(LID_OPEN, 0, ease(clamp((T - closeT) / 1.3, 0, 1)));
+  dustU.uTime.value = T; dustU.tShadow.value = sun.shadow.map ? sun.shadow.map.texture : null; dustU.uOn.value = sun.shadow.map ? 1 : 0;
+  vol.uniforms.uSeed.value = (T * 12 | 0) % 7;
+  composer.render();
+}
+function loop(now) { if (!window.__paused) frame(now); requestAnimationFrame(loop); }
+
+$('again').addEventListener('click', () => play(true));
+$('lang').addEventListener('click', () => { lang = lang === 'zh' ? 'en' : 'zh'; play(false); });
+window.__adv = sec => { const t0 = performance.now(); for (let k = 0; k < Math.round(sec * 30); k++) frame(last + 1000 / 30); return performance.now() - t0; };
+window.__fx = {camera, CAMV, placeCamera, uWin, vol, tiltH, tiltV, sun, letters, lid, world, frame, get T() { return T; }};
+
+$('loading').textContent = UI[lang].loading;
+drawScreen(); drawPhone('', '');
+renderer.compile(scene, camera);
+requestAnimationFrame(() => { $('loading').classList.add('off'); T = 0; last = performance.now(); requestAnimationFrame(loop); play(true);
+  if (STILL) setTimeout(() => { window.__paused = true; for (let k = 0; k < 300; k++) frame(last + 1000 / 30); }, 300); });
+</script>
